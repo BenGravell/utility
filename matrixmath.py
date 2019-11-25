@@ -1,5 +1,5 @@
-"""General matrix math functions"""
-# # Author: Ben Gravell
+"""General matrix math functions."""
+# Author: Ben Gravell
 
 import numpy as np
 from numpy import linalg as la
@@ -8,17 +8,17 @@ from functools import reduce
 
 
 def vec(A):
-    """Return the vectorized matrix A by stacking its columns"""
+    """Return the vectorized matrix A by stacking its columns."""
     return A.reshape(-1, order="F")
 
 
 def sympart(A):
-    """Return the symmetric part of matrix A"""
+    """Return the symmetric part of matrix A."""
     return 0.5*(A+A.T)
 
 
 def is_pos_def(A):
-    """Check if matrix A is positive definite"""
+    """Check if matrix A is positive definite."""
     try:
         la.cholesky(A)
         return True
@@ -27,12 +27,12 @@ def is_pos_def(A):
 
 
 def succ(A,B):
-    """Check the positive definite partial ordering of A > B"""
+    """Check the positive definite partial ordering of A > B."""
     return is_pos_def(A-B)
 
 
 def psdpart(X):
-    """Return the positive semidefinite part of a symmetric matrix"""
+    """Return the positive semidefinite part of a symmetric matrix."""
     X = sympart(X)
     Y = np.zeros_like(X)
     eigvals, eigvecs = la.eig(X)
@@ -44,7 +44,7 @@ def psdpart(X):
 
 
 def kron(*args):
-    """Overload and extend the numpy kron function to take a single argument"""
+    """Overload and extend the numpy kron function to take a single argument."""
     if len(args)==1:
         return np.kron(args[0],args[0])
     else:
@@ -52,17 +52,17 @@ def kron(*args):
 
 
 def mdot(*args):
-    """Multiple dot product"""
+    """Multiple dot product."""
     return reduce(np.dot, args)
 
 
 def mip(A,B):
-    """Matrix inner product of A and B"""
+    """Matrix inner product of A and B."""
     return np.trace(mdot(A.T,B))
 
 
 def specrad(A):
-    """Spectral radius of matrix A"""
+    """Spectral radius of matrix A."""
     try:
         return np.max(np.abs(la.eig(A)[0]))
     except np.linalg.LinAlgError:
@@ -70,27 +70,37 @@ def specrad(A):
 
 
 def printeigs(A):
-    """Print all eigenvalues of matrix A"""
+    """Print all eigenvalues of matrix A."""
     print(la.eig(A)[0])
     return
 
 
 def minsv(A):
-    """Minimum singular value"""
+    """Minimum singular value."""
     return la.svd(A)[1].min()
 
 
 def solveb(a,b):
-    """Solve a = bx; similar to MATLAB / operator for square invertible matrices"""
+    """
+    Solve a = bx.
+    Similar to MATLAB / operator for square invertible matrices.
+    """
     return la.solve(b.T,a.T).T
+
+
+def lstsqb(a,b):
+    """
+    Return least-squares solution to a = bx.
+    Similar to MATLAB / operator for rectangular matrices.
+    """
+    return la.lstsq(b.T,a.T,rcond=None)[0].T
 
 
 def dlyap(A,Q):
     """
     Solve the discrete-time Lyapunov equation.
-    Ammend solve_discrete_lyapunov to correct issue where
-    input matrices are modified (unwanted behavior).
-    Simply pass a copy of the matrices to protect them from modification.
+    Wrapper around scipy.linalg.solve_discrete_lyapunov.
+    Pass a copy of input matrices to protect them from modification.
     """
     try:
         return solve_discrete_lyapunov(np.copy(A),np.copy(Q))
@@ -101,8 +111,18 @@ def dlyap(A,Q):
 def dare(A,B,Q,R):
     """
     Solve the discrete-time algebraic Riccati equation.
-    Ammend solve_discrete_are to correct issue where
-    input matrices are modified (unwanted behavior).
-    Simply pass a copy of the matrices to protect them from modification.
+    Wrapper around scipy.linalg.solve_discrete_are.
+    Pass a copy of input matrices to protect them from modification.
     """
     return solve_discrete_are(np.copy(A),np.copy(B),np.copy(Q),np.copy(R))
+
+
+def dare_gain(A,B,Q,R):
+    """
+    Solve the discrete-time algebraic Riccati equation.
+    Return the optimal cost-to-go matrix P and associated gains K
+    such that u = Kx is the optimal control.
+    """
+    P = dare(A,B,Q,R)
+    K = -la.solve((R + mdot(B.T, P, B)),  mdot(B.T, P, A))
+    return P, K
