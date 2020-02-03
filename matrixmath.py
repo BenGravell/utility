@@ -3,8 +3,10 @@
 
 import numpy as np
 from numpy import linalg as la
-from scipy.linalg import solve_discrete_lyapunov,solve_discrete_are
+from scipy.linalg import solve_discrete_lyapunov, solve_discrete_are
 from functools import reduce
+
+from .extramath import quadratic_formula
 
 
 def vec(A):
@@ -46,7 +48,7 @@ def psdpart(X):
 def kron(*args):
     """Overload and extend the numpy kron function to take a single argument."""
     if len(args)==1:
-        return np.kron(args[0],args[0])
+        return np.kron(args[0], args[0])
     else:
         return np.kron(*args)
 
@@ -58,7 +60,7 @@ def mdot(*args):
 
 def mip(A,B):
     """Matrix inner product of A and B."""
-    return np.trace(mdot(A.T,B))
+    return np.trace(mdot(A.T, B))
 
 
 def specrad(A):
@@ -80,49 +82,89 @@ def minsv(A):
     return la.svd(A)[1].min()
 
 
-def solveb(a,b):
+def solveb(a, b):
     """
     Solve a = bx.
     Similar to MATLAB / operator for square invertible matrices.
     """
-    return la.solve(b.T,a.T).T
+    return la.solve(b.T, a.T).T
 
 
-def lstsqb(a,b):
+def lstsqb(a, b):
     """
     Return least-squares solution to a = bx.
     Similar to MATLAB / operator for rectangular matrices.
+    If b is invertible then the solution is la.solve(a, b).T
     """
-    return la.lstsq(b.T,a.T,rcond=None)[0].T
+    return la.lstsq(b.T, a.T, rcond=None)[0].T
 
 
-def dlyap(A,Q):
+def dlyap(A, Q):
     """
     Solve the discrete-time Lyapunov equation.
     Wrapper around scipy.linalg.solve_discrete_lyapunov.
     Pass a copy of input matrices to protect them from modification.
     """
     try:
-        return solve_discrete_lyapunov(np.copy(A),np.copy(Q))
+        return solve_discrete_lyapunov(np.copy(A), np.copy(Q))
     except ValueError:
-        return np.full_like(Q,np.inf)
+        return np.full_like(Q, np.inf)
 
 
-def dare(A,B,Q,R):
+def dare_scalar(A, B, Q, R):
+    """
+    Solve the discrete-time algebraic Riccati equation for the scalar case of
+    a single state and a single input.
+    In this case the equation is a scalar quadratic equation.
+    """
+    A, B, Q, R = [float(var) for var in [A, B, Q, R]]
+
+    A2 = A**2
+    B2 = B**2
+
+    aa = -B2
+    bb = R*(A2-1) + Q*B2
+    cc = Q*R
+
+    roots = np.array(quadratic_formula(aa, bb, cc))
+
+    if not(roots[0] > 0 or roots[1] > 0):
+        P = None
+    else:
+        P = roots[roots > 0][0]*np.eye(1)
+    return P
+
+
+def dare_gain_scalar(A, B, Q, R):
+    P = dare_scalar(A, B, Q, R)
+    K = -B*P*A / (R+B*B*P)
+    return P, K
+
+
+def dare(A, B, Q, R):
     """
     Solve the discrete-time algebraic Riccati equation.
     Wrapper around scipy.linalg.solve_discrete_are.
     Pass a copy of input matrices to protect them from modification.
     """
-    return solve_discrete_are(np.copy(A),np.copy(B),np.copy(Q),np.copy(R))
+    # Handle the scalar case more efficiently by solving the ARE exactly
+    if A.shape[1] == 1 and B.shape[1] == 1:
+        return dare_scalar(A, B, Q, R)*np.eye(1)
+    else:
+        return solve_discrete_are(np.copy(A), np.copy(B), np.copy(Q), np.copy(R))
 
 
-def dare_gain(A,B,Q,R):
+def dare_gain(A, B, Q, R):
     """
     Solve the discrete-time algebraic Riccati equation.
     Return the optimal cost-to-go matrix P and associated gains K
     such that u = Kx is the optimal control.
     """
-    P = dare(A,B,Q,R)
-    K = -la.solve((R + mdot(B.T, P, B)),  mdot(B.T, P, A))
-    return P, K
+    # Handle the scalar case more efficiently by solving the ARE exactly
+    if A.shape[1] == 1 and B.shape[1] == 1:
+        P, K = dare_gain_scalar(A, B, Q, R)
+        return P*np.eye(1), K*np.eye(1)
+    else:
+        P = dare(A, B, Q, R)
+        K = -la.solve((R + mdot(B.T, P, B)),  mdot(B.T, P, A))
+        return P, K

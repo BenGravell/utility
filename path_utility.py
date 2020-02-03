@@ -1,4 +1,4 @@
-"""Utilities"""
+"""Path utilities"""
 # Author: Ben Gravell
 
 import os

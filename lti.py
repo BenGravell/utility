@@ -52,17 +52,17 @@ def dgram_ctrb(A, B):
     return dlyap(A, B.dot(B.T))
 
 
-def dgram_obsv(A,C):
+def dgram_obsv(A, C):
     """Discrete-time observability Gramian."""
     # return dlyap(A.T,C.T.dot(C))
     return dgram_ctrb(A.T, C.T)
 
 
-def dctg(A,Q,t):
+def dctg(A, Q, t):
     """Discrete-time finite-horizon cost-to-go matrix"""
     P = np.copy(Q)
     Pt = np.copy(Q)
     for _ in range(t):
-        Pt = mdot(A.T,Pt,A)
+        Pt = mdot(A.T, Pt, A)
         P += Pt
     return P

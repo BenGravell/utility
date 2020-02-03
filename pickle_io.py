@@ -2,7 +2,8 @@
 # Author: Ben Gravell
 
 import pickle
-from utility import create_directory
+import os
+from .path_utility import create_directory
 
 
 def pickle_import(filename_in):
@@ -14,6 +15,6 @@ def pickle_import(filename_in):
 
 def pickle_export(dirname_out, filename_out, data):
     create_directory(dirname_out)
-    pickle_on = open(filename_out,"wb")
+    pickle_on = open(os.path.join(dirname_out, filename_out),"wb")
     pickle.dump(data, pickle_on)
     pickle_on.close()

@@ -4,12 +4,18 @@
 import numpy as np
 from numpy import linalg as la
 from .matrixmath import is_pos_def, vec, sympart, kron, dlyap, mdot
+from .extramath import quadratic_formula
 
 import warnings
 from warnings import warn
 
 
 def dlyap_mult(A,B,K,a,Aa,b,Bb,Q,R,S0,matrixtype='P',algo='iterative',show_warn=False,check_pd=False,P00=None,S00=None):
+    """
+    Solve a discrete-time generalized Lyapunov equation
+    for stochastic linear systems with multiplicative noise.
+    """
+
     n = A.shape[1]
     n2 = n*n
     p = len(a)
@@ -168,59 +174,112 @@ def dlyap_mult(A,B,K,a,Aa,b,Bb,Q,R,S0,matrixtype='P',algo='iterative',show_warn=
     elif matrixtype=='S':
         return S
     elif matrixtype=='PS':
-        return P,S
+        return P, S
 
 
-def dare_mult(A,B,a,Aa,b,Bb,Q,R,algo='iterative',show_warn=False):
-    if algo=='iterative':
+def dare_mult(A, B, a, Aa, b, Bb, Q, R, algo='iterative', show_warn=False):
+    """
+    Solve a discrete-time generalized algebraic Riccati equation
+    for stochastic linear systems with multiplicative noise.
+    """
+
+    n = A.shape[1]
+    m = B.shape[1]
+    p = len(a)
+    q = len(b)
+
+    failed = False
+
+    # Handle the scalar case more efficiently by solving the ARE exactly
+    if n == 1 and m == 1:
+        if p == 1 and q == 1:
+            algo = 'scalar'
+        else:
+            try:
+                if np.count_nonzero(a[1:]) == 0 and np.count_nonzero(b[1:]) == 0:
+                    algo = 'scalar'
+                elif np.sum(np.count_nonzero(Aa[1:], axis=(1,2))) == 0 \
+                 and np.sum(np.count_nonzero(Bb[1:], axis=(1,2))) == 0:
+                    algo = 'scalar'
+            except:
+                pass
+
+    if algo == 'scalar':
+        A2 = A[0,0]**2
+        B2 = B[0,0]**2
+        Aa2 = Aa[0,0]**2
+        Bb2 = Bb[0,0]**2
+
+        aAa2 = a[0]*Aa2
+        bBb2 = b[0]*Bb2
+
+        aAa2m1 = aAa2-1
+        B2pbBb2 = B2+bBb2
+
+        aa = aAa2m1*B2pbBb2+A2*bBb2
+        bb = R[0,0]*(A2+aAa2m1) + Q[0,0]*B2pbBb2
+        cc = Q[0,0]*R[0,0]
+
+        roots = np.array(quadratic_formula(aa, bb, cc))
+
+        if not(roots[0] > 0 or roots[1] > 0):
+            failed = True
+        else:
+            P = roots[roots > 0][0]*np.eye(1)
+            K = -B*P*A / (R+B2pbBb2*P)
+
+    elif algo=='iterative':
         # Options
         max_iters = 1000
         epsilon = 1e-6
-        Pelmax = 1e20
-        n = A.shape[1]
-        m = B.shape[1]
-        p = len(a)
-        q = len(b)
+        Pelmax = 1e40
+
         # Initialize
         P = Q
-        iterc = 0
-        stop_early = False
+        counter = 0
         converged = False
         stop = False
 
         while not stop:
             # Record previous iterate
-            P_prev = P
+            P_prev = np.copy(P)
             # Certain part
-            APAcer = mdot(A.T,P,A)
-            BPBcer = mdot(B.T,P,B)
+            APAcer = mdot(A.T, P, A)
+            BPBcer = mdot(B.T, P, B)
             # Uncertain part
             APAunc = np.zeros([n,n])
             for i in range(p):
-                APAunc += a[i]*mdot(Aa[i].T,P,Aa[i])
+                APAunc += a[i]*mdot(Aa[i].T, P, Aa[i])
             BPBunc = np.zeros([m,m])
             for j in range(q):
-                BPBunc += b[j]*mdot(Bb[j].T,P,Bb[j])
+                BPBunc += b[j]*mdot(Bb[j].T, P, Bb[j])
             APAsum = APAcer+APAunc
             BPBsum = BPBcer+BPBunc
             # Recurse
-            P = Q + APAsum - mdot(A.T,P,B,la.solve(R+BPBsum,B.T),P,A)
+            P = Q + APAsum - mdot(A.T, P, B, la.solve(R+BPBsum, B.T), P, A)
+
             # Check for stopping condition
             if la.norm(P-P_prev,'fro')/la.norm(P,'fro') < epsilon:
                 converged = True
-            if iterc >= max_iters or np.any(np.abs(P)>Pelmax):
-                stop_early = True
+            if counter >= max_iters or np.any(np.abs(P) > Pelmax):
+                failed = True
             else:
-                iterc += 1
-            stop = converged or stop_early
+                counter += 1
+            stop = converged or failed
+
         # Compute the gains
-        if stop_early:
-            if show_warn:
-                warnings.simplefilter('always', UserWarning)
-                warn("Recursion failed, ensure system is mean square stabilizable "
-                     "or increase maximum iterations")
-            P = None
-            K = None
-        else:
-            K = -mdot(la.solve(R+BPBsum,B.T),P,A)
+        if not failed:
+            K = -mdot(la.solve(R+BPBsum, B.T), P, A)
+
+        if np.any(np.isnan(P)):
+            failed = True
+
+    if failed:
+        if show_warn:
+            warnings.simplefilter('always', UserWarning)
+            warn("Recursion failed, ensure system is mean square stabilizable "
+                 "or increase maximum iterations")
+        P = None
+        K = None
+
     return P, K
