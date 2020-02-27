@@ -19,6 +19,15 @@ def svec(A):
     return A[np.triu_indices(A.shape[0])]
 
 
+def svec2(A):
+    """
+    Return the symmetric vectorization i.e. the vectorization of the upper triangular part of matrix A
+    with off-diagonal entries multiplied by sqrt(2) so that la.norm(A, ord='fro')**2 == np.dot(svec2(A), svec2(A))
+    """
+    B = A + np.triu(A, 1)*(2**0.5 - 1)
+    return B[np.triu_indices(A.shape[0])]
+
+
 def smat(v):
     """Return the symmetric matricization i.e. the inverse operation of svec of vector v."""
     m = v.size
@@ -27,6 +36,19 @@ def smat(v):
     idx_lower = np.tril_indices(n, -1)
     A = np.zeros([n, n])
     A[idx_upper] = v
+    A[idx_lower] = A.T[idx_lower]
+    return A
+
+
+def smat2(v):
+    """Return the symmetric matricization i.e. the inverse operation of svec2 of vector v."""
+    m = v.size
+    n = int(((1+m*8)**0.5 - 1)/2)
+    idx_upper = np.triu_indices(n)
+    idx_lower = np.tril_indices(n, -1)
+    A = np.zeros([n, n])
+    A[idx_upper] = v
+    A[np.triu_indices(n,1)] /= 2**0.5
     A[idx_lower] = A.T[idx_lower]
     return A
 
