@@ -6,12 +6,29 @@ from numpy import linalg as la
 from scipy.linalg import solve_discrete_lyapunov, solve_discrete_are
 from functools import reduce
 
-from .extramath import quadratic_formula
+from extramath import quadratic_formula
 
 
 def vec(A):
     """Return the vectorized matrix A by stacking its columns."""
     return A.reshape(-1, order="F")
+
+
+def svec(A):
+    """Return the symmetric vectorization i.e. the vectorization of the upper triangular part of matrix A."""
+    return A[np.triu_indices(A.shape[0])]
+
+
+def smat(v):
+    """Return the symmetric matricization i.e. the inverse operation of svec of vector v."""
+    m = v.size
+    n = int(((1+m*8)**0.5 - 1)/2)
+    idx_upper = np.triu_indices(n)
+    idx_lower = np.tril_indices(n, -1)
+    A = np.zeros([n, n])
+    A[idx_upper] = v
+    A[idx_lower] = A.T[idx_lower]
+    return A
 
 
 def sympart(A):

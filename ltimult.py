@@ -3,8 +3,8 @@
 
 import numpy as np
 from numpy import linalg as la
-from .matrixmath import is_pos_def, vec, sympart, kron, dlyap, mdot
-from .extramath import quadratic_formula
+from matrixmath import is_pos_def, vec, sympart, kron, dlyap, mdot
+from extramath import quadratic_formula
 
 import warnings
 from warnings import warn

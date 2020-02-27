@@ -2,7 +2,7 @@
 # Author: Ben Gravell
 
 import numpy as np
-from .matrixmath import dlyap, mdot
+from matrixmath import dlyap, mdot
 
 
 def ctrb(A, B):
