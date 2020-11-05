@@ -3,7 +3,7 @@
 
 import pickle
 import os
-from path_utility import create_directory
+from .path_utility import create_directory
 
 
 def pickle_import(filename_in):

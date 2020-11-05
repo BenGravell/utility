@@ -5,8 +5,9 @@ import numpy as np
 from numpy import linalg as la
 from scipy.linalg import solve_discrete_lyapunov, solve_discrete_are
 from functools import reduce
+from copy import copy
 
-from extramath import quadratic_formula
+from .extramath import quadratic_formula
 
 
 def vec(A):
@@ -150,20 +151,26 @@ def dlyap(A, Q):
         return np.full_like(Q, np.inf)
 
 
-def dare_scalar(A, B, Q, R):
+def dare_scalar(A, B, Q, R, E=None, S=None):
     """
     Solve the discrete-time algebraic Riccati equation for the scalar case of
     a single state and a single input.
     In this case the equation is a scalar quadratic equation.
     """
     A, B, Q, R = [float(var) for var in [A, B, Q, R]]
+    if E is None:
+        E = 1
+    if S is None:
+        S = 0
 
     A2 = A**2
     B2 = B**2
+    E2 = E**2
+    S2 = S**2
 
-    aa = -B2
-    bb = R*(A2-1) + Q*B2
-    cc = Q*R
+    aa = -B2*E2
+    bb = R*(A2-E2) + Q*B2 + 2*A*B*S
+    cc = Q*R - S2
 
     roots = np.array(quadratic_formula(aa, bb, cc))
 
@@ -174,13 +181,17 @@ def dare_scalar(A, B, Q, R):
     return P
 
 
-def dare_gain_scalar(A, B, Q, R):
-    P = dare_scalar(A, B, Q, R)
-    K = -B*P*A / (R+B*B*P)
+def dare_gain_scalar(A, B, Q, R, E=None, S=None):
+    P = dare_scalar(A, B, Q, R, E, S)
+    Huu = R+B*B*P
+    Hux = B*P*A
+    if S is not None:
+        Hux += S
+    K = - Huu / Hux
     return P, K
 
 
-def dare(A, B, Q, R):
+def dare(A, B, Q, R, E=None, S=None):
     """
     Solve the discrete-time algebraic Riccati equation.
     Wrapper around scipy.linalg.solve_discrete_are.
@@ -188,12 +199,12 @@ def dare(A, B, Q, R):
     """
     # Handle the scalar case more efficiently by solving the ARE exactly
     if A.shape[1] == 1 and B.shape[1] == 1:
-        return dare_scalar(A, B, Q, R)*np.eye(1)
+        return dare_scalar(A, B, Q, R, E, S)*np.eye(1)
     else:
-        return solve_discrete_are(np.copy(A), np.copy(B), np.copy(Q), np.copy(R))
+        return solve_discrete_are(copy(A), copy(B), copy(Q), copy(R), copy(E), copy(S))
 
 
-def dare_gain(A, B, Q, R):
+def dare_gain(A, B, Q, R, E=None, S=None):
     """
     Solve the discrete-time algebraic Riccati equation.
     Return the optimal cost-to-go matrix P and associated gains K
@@ -201,9 +212,13 @@ def dare_gain(A, B, Q, R):
     """
     # Handle the scalar case more efficiently by solving the ARE exactly
     if A.shape[1] == 1 and B.shape[1] == 1:
-        P, K = dare_gain_scalar(A, B, Q, R)
+        P, K = dare_gain_scalar(A, B, Q, R, E, S)
         return P*np.eye(1), K*np.eye(1)
     else:
-        P = dare(A, B, Q, R)
-        K = -la.solve((R + mdot(B.T, P, B)),  mdot(B.T, P, A))
+        P = dare(A, B, Q, R, E, S)
+        Hux = mdot(B.T, P, A)
+        Huu = R + mdot(B.T, P, B)
+        if S is not None:
+            Hux += S.T
+        K = -la.solve(Huu, Hux)
         return P, K

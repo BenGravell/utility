@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
+
 # Low quality, fast processing downscaling
 def downscale(x, scale):
     return x[::scale, ::scale]

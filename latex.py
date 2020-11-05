@@ -14,6 +14,7 @@ def print_latex_matrix(A):
     print('\\end{bmatrix}')
     print('')
 
+
 if __name__ == "__main__":
     import numpy as np
     A = np.array([[0.8,0.1],[0.1,0.8]])
