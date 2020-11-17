@@ -15,6 +15,15 @@ def vec(A):
     return A.reshape(-1, order="F")
 
 
+def mat(v, shape=None):
+    """Return matricization i.e. the inverse operation of vec of vector v."""
+    if shape is None:
+        dim = int(np.sqrt(v.size))
+        shape = dim, dim
+    matrix = v.reshape(shape[1], shape[0]).T
+    return matrix
+
+
 def svec(A):
     """Return the symmetric vectorization i.e. the vectorization of the upper triangular part of matrix A."""
     return A[np.triu_indices(A.shape[0])]
