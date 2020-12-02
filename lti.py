@@ -21,11 +21,11 @@ def ctrb(A, B):
     """
 
     n, m = np.shape(B)
-    AiB = np.zeros([n,m,n])
-    AiB[:,:,0] = np.copy(B)
+    AiB = np.zeros([n, m, n])
+    AiB[:, :, 0] = np.copy(B)
     for i in range(n-1):
-        AiB[:,:,i+1] = np.dot(A, AiB[:,:,i])
-    ctrb_matrix = np.reshape(AiB, [n,n*m], order='F')
+        AiB[:, :, i+1] = np.dot(A, AiB[:, :, i])
+    ctrb_matrix = np.reshape(AiB, [n, n * m], order='F')
     return ctrb_matrix
 
 
@@ -44,7 +44,7 @@ def obsv(A, C):
     >>> O = obsv(A, C)
    """
 
-    return ctrb(A.T,  C.T).T
+    return ctrb(A.T, C.T).T
 
 
 def dgram_ctrb(A, B):
