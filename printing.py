@@ -87,8 +87,12 @@ def create_tag(message, message_type='info', prefix='--', suffix='', end=''):
         color_str = printcolors.LightBlue
     elif message_type == 'fail':
         color_str = printcolors.Red
+    elif message_type == 'warn':
+        color_str = printcolors.Yellow
     elif message_type == 'pass':
         color_str = printcolors.Green
+    else:
+        raise ValueError('Invalid message_type for tag!')
 
     # Build the tag
     tag_str = ''
