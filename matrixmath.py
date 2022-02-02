@@ -41,7 +41,7 @@ def svec2(A):
 def smat(v):
     """Return the symmetric matricization i.e. the inverse operation of svec of vector v."""
     m = v.size
-    n = int(((1+m*8)**0.5 - 1)/2)
+    n = int(((1 + m*8)**0.5 - 1)/2)
     idx_upper = np.triu_indices(n)
     idx_lower = np.tril_indices(n, -1)
     A = np.zeros([n, n])
@@ -53,19 +53,19 @@ def smat(v):
 def smat2(v):
     """Return the symmetric matricization i.e. the inverse operation of svec2 of vector v."""
     m = v.size
-    n = int(((1+m*8)**0.5 - 1)/2)
+    n = int(((1 + m*8)**0.5 - 1)/2)
     idx_upper = np.triu_indices(n)
     idx_lower = np.tril_indices(n, -1)
     A = np.zeros([n, n])
     A[idx_upper] = v
-    A[np.triu_indices(n,1)] /= 2**0.5
+    A[np.triu_indices(n, 1)] /= 2**0.5
     A[idx_lower] = A.T[idx_lower]
     return A
 
 
 def sympart(A):
     """Return the symmetric part of matrix A."""
-    return 0.5*(A+A.T)
+    return 0.5*(A + A.T)
 
 
 def is_pos_def(A):
@@ -77,9 +77,9 @@ def is_pos_def(A):
         return False
 
 
-def succ(A,B):
+def succ(A, B):
     """Check the positive definite partial ordering of A > B."""
-    return is_pos_def(A-B)
+    return is_pos_def(A - B)
 
 
 def psdpart(X):
@@ -89,27 +89,32 @@ def psdpart(X):
     eigvals, eigvecs = la.eig(X)
     for i in range(X.shape[0]):
         if eigvals[i] > 0:
-            Y += eigvals[i]*np.outer(eigvecs[:,i],eigvecs[:,i])
+            Y += eigvals[i]*np.outer(eigvecs[:, i], eigvecs[:, i])
     Y = sympart(Y)
     return Y
 
 
 def kron(*args):
     """Overload and extend the numpy kron function to take a single argument."""
-    if len(args)==1:
+    if len(args) == 1:
         return np.kron(args[0], args[0])
     else:
         return np.kron(*args)
 
 
 def mdot(*args):
-    """Multiple dot product."""
-    return reduce(np.dot, args)
+    """Multiple dot product, thin convenience wrapper around numpy.linalg.multi_dot()."""
+    return np.linalg.multi_dot(args)
 
 
-def mip(A,B):
+def mip(A, B):
     """Matrix inner product of A and B."""
     return np.trace(mdot(A.T, B))
+
+
+def matmul_lr(A, P):
+    """Matrix multiplication of P on the left by A and on the right by A.T."""
+    return mdot(A, P, A.T)
 
 
 def specrad(A):
@@ -178,12 +183,12 @@ def dare_scalar(A, B, Q, R, E=None, S=None):
     S2 = S**2
 
     aa = -B2*E2
-    bb = R*(A2-E2) + Q*B2 + 2*A*B*S
+    bb = R*(A2 - E2) + Q*B2 + 2*A*B*S
     cc = Q*R - S2
 
     roots = np.array(quadratic_formula(aa, bb, cc))
 
-    if not(roots[0] > 0 or roots[1] > 0):
+    if not (roots[0] > 0 or roots[1] > 0):
         P = None
     else:
         P = roots[roots > 0][0]*np.eye(1)
@@ -192,11 +197,11 @@ def dare_scalar(A, B, Q, R, E=None, S=None):
 
 def dare_gain_scalar(A, B, Q, R, E=None, S=None):
     P = dare_scalar(A, B, Q, R, E, S)
-    Huu = R+B*B*P
+    Huu = R + B*B*P
     Hux = B*P*A
     if S is not None:
         Hux += S
-    K = - Huu / Hux
+    K = - Huu/Hux
     return P, K
 
 
