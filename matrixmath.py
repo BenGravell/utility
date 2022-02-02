@@ -109,7 +109,7 @@ def mdot(*args):
 
 def mip(A, B):
     """Matrix inner product of A and B."""
-    return np.trace(mdot(A.T, B))
+    return np.tensordot(A, B).item()
 
 
 def matmul_lr(A, P):
